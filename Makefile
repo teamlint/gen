@@ -1,3 +1,5 @@
+.PHONY: test
+
 WORKDIR=`pwd`
 
 default: build
@@ -47,4 +49,6 @@ build:
 	go build .
 
 test:
-	go test  -v .
+	go test  -v ./test
+run:
+	go run main.go --connstr "root:123456@tcp(127.0.0.1:3306)/test?&parseTime=True" --database test  --json --gorm 

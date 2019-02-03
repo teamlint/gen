@@ -19,11 +19,14 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/serenize/snaker"
-	"github.com/smallnest/gen/dbmeta"
-	gtmpl "github.com/smallnest/gen/template"
+	"github.com/spf13/viper"
+	"github.com/teamlint/gen/config"
+	"github.com/teamlint/gen/dbmeta"
+	gtmpl "github.com/teamlint/gen/template"
 )
 
 var (
+	cfg         *config.Config
 	sqlConnStr  = goopt.String([]string{"-c", "--connstr"}, "nil", "database connection string")
 	sqlDatabase = goopt.String([]string{"-d", "--database"}, "nil", "Database to for connection")
 	sqlTable    = goopt.String([]string{"-t", "--table"}, "", "Table to build struct from")
@@ -50,9 +53,24 @@ func init() {
 	//Parse options
 	goopt.Parse(nil)
 
+	// config
+	viper.SetConfigName("config")
+	viper.SetDefault("debug", false)
+	viper.AddConfigPath(".")    // optionally look for config in the working directory
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		panic(fmt.Errorf("Fatal error config file: %s \n", err))
+	}
 }
 
 func main() {
+	// config
+	cfg = &config.Config{
+		Debug: viper.GetBool("debug"),
+		// DB:config.Convert(viper.Get("db"))
+	}
+	fmt.Printf("[config] %+v\n", *cfg)
+	fmt.Printf("debug: %v\n", viper.GetBool("Debug"))
 	// Username is required
 	if sqlConnStr == nil || *sqlConnStr == "" {
 		fmt.Println("sql connection string is required! Add it with --connstr=s")

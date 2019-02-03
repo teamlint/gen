@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jimsmart/schema"
+	"github.com/spf13/viper"
 )
 
 type ModelInfo struct {
@@ -31,6 +32,7 @@ var commonInitialisms = map[string]bool{
 	"HTTP":  true,
 	"HTTPS": true,
 	"ID":    true,
+	"PID":   true,
 	"IP":    true,
 	"JSON":  true,
 	"LHS":   true,
@@ -68,26 +70,45 @@ var intToWordMap = []string{
 
 // Constants for return types of golang
 const (
-	golangByteArray  = "[]byte"
-	gureguNullInt    = "null.Int"
-	sqlNullInt       = "sql.NullInt64"
-	golangInt        = "int"
-	golangInt64      = "int64"
-	gureguNullFloat  = "null.Float"
-	sqlNullFloat     = "sql.NullFloat64"
-	golangFloat      = "float"
-	golangFloat32    = "float32"
-	golangFloat64    = "float64"
+	golangByteArray = "[]byte"
+
+	gureguNullInt = "null.Int"
+	sqlNullInt    = "sql.NullInt64"
+	golangNullInt = "*int"
+	golangInt     = "int"
+
+	golangNullInt64 = "*int64"
+	golangInt64     = "int64"
+
+	gureguNullFloat = "null.Float"
+	sqlNullFloat    = "sql.NullFloat64"
+	golangNullFloat = "*float"
+	golangFloat     = "float"
+
+	golangNullFloat32 = "*float32"
+	golangFloat32     = "float32"
+
+	golangNullFloat64 = "*float64"
+	golangFloat64     = "float64"
+
 	gureguNullString = "null.String"
 	sqlNullString    = "sql.NullString"
-	gureguNullTime   = "null.Time"
-	golangTime       = "time.Time"
+	golangNullString = "*string"
+	golangString     = "string"
+
+	gureguNullTime = "null.Time"
+	golangNullTime = "*time.Time"
+	golangTime     = "time.Time"
+
+	gureguNullBool = "null.Bool"
+	golangNullBool = "*bool"
+	golangBool     = "bool"
 )
 
 // GenerateStruct generates a struct for the given table.
 func GenerateStruct(db *sql.DB, tableName string, structName string, pkgName string, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) *ModelInfo {
 	cols, _ := schema.Table(db, tableName)
-	fields := generateFieldsTypes(db, cols, 0, jsonAnnotation, gormAnnotation, gureguTypes)
+	fields := generateFieldsTypes(db, tableName, cols, 0, jsonAnnotation, gormAnnotation, gureguTypes)
 
 	//fields := generateMysqlTypes(db, columnTypes, 0, jsonAnnotation, gormAnnotation, gureguTypes)
 
@@ -103,7 +124,7 @@ func GenerateStruct(db *sql.DB, tableName string, structName string, pkgName str
 }
 
 // Generate fields string
-func generateFieldsTypes(db *sql.DB, columns []*sql.ColumnType, depth int, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) []string {
+func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType, depth int, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) []string {
 
 	//sort.Strings(keys)
 
@@ -112,11 +133,32 @@ func generateFieldsTypes(db *sql.DB, columns []*sql.ColumnType, depth int, jsonA
 	for i, c := range columns {
 		nullable, _ := c.Nullable()
 		key := c.Name()
-		valueType := sqlTypeToGoType(strings.ToLower(c.DatabaseTypeName()), nullable, gureguTypes)
+		// valueType := sqlTypeToGoType(strings.ToLower(c.DatabaseTypeName()), nullable, gureguTypes)
+		var valueType string
+		// 自定义类型
+		var customType = viper.GetString(fmt.Sprintf("tables.%s.columns.%s.type", tableName, key))
+		if customType != "" {
+			fmt.Printf("column[%v] custom type: %v\n", key, customType)
+			if nullable {
+				valueType = "*" + customType
+			} else {
+				valueType = customType
+			}
+		} else {
+			valueType = sqlTypeToGoType(c, gureguTypes)
+		}
 		if valueType == "" { // unknown type
 			continue
 		}
-		fieldName := FmtFieldName(stringifyFirstChar(key))
+		// 自定义字段名
+		var fieldName string
+		var customName = viper.GetString(fmt.Sprintf("tables.%s.columns.%s.alias", tableName, key))
+		if customName != "" {
+			fmt.Printf("column[%v] custom name: %v\n", key, customName)
+			fieldName = customName
+		} else {
+			fieldName = FmtFieldName(stringifyFirstChar(key))
+		}
 
 		var annotations []string
 		if gormAnnotation == true {
@@ -147,14 +189,22 @@ func generateFieldsTypes(db *sql.DB, columns []*sql.ColumnType, depth int, jsonA
 	return fields
 }
 
-func sqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string {
+// sqlTypeToGoType 数据列类型转换go类型
+func sqlTypeToGoType(col *sql.ColumnType, gureguTypes bool) string {
+	mysqlType := strings.ToLower(col.DatabaseTypeName())
+	nullable, _ := col.Nullable()
+	// if viper.GetBool("debug") {
+	fmt.Printf("[%v] ColumnType: %+v\n", col.Name(), *col)
+	// }
 	switch mysqlType {
 	case "tinyint", "int", "smallint", "mediumint":
+		// int
 		if nullable {
 			if gureguTypes {
 				return gureguNullInt
 			}
-			return sqlNullInt
+			// return sqlNullInt
+			return golangNullInt
 		}
 		return golangInt
 	case "bigint":
@@ -162,7 +212,8 @@ func sqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string {
 			if gureguTypes {
 				return gureguNullInt
 			}
-			return sqlNullInt
+			// return sqlNullInt
+			return golangNullInt64
 		}
 		return golangInt64
 	case "char", "enum", "varchar", "longtext", "mediumtext", "text", "tinytext":
@@ -170,12 +221,17 @@ func sqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string {
 			if gureguTypes {
 				return gureguNullString
 			}
-			return sqlNullString
+			// return sqlNullString
+			return golangNullString
 		}
-		return "string"
+		return golangString
 	case "date", "datetime", "time", "timestamp":
-		if nullable && gureguTypes {
-			return gureguNullTime
+		if nullable {
+
+			if gureguTypes {
+				return gureguNullTime
+			}
+			return golangNullTime
 		}
 		return golangTime
 	case "decimal", "double":
@@ -183,7 +239,8 @@ func sqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string {
 			if gureguTypes {
 				return gureguNullFloat
 			}
-			return sqlNullFloat
+			// return sqlNullFloat
+			return golangNullFloat64
 		}
 		return golangFloat64
 	case "float":
@@ -191,7 +248,8 @@ func sqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string {
 			if gureguTypes {
 				return gureguNullFloat
 			}
-			return sqlNullFloat
+			// return sqlNullFloat
+			return golangNullFloat32
 		}
 		return golangFloat32
 	case "binary", "blob", "longblob", "mediumblob", "varbinary":
