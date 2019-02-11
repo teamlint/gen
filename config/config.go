@@ -5,6 +5,9 @@ type Config struct {
 	DB     DB               `toml:"db" json:"db"`
 	Debug  bool             `toml:"debug,omitempty" json:"debug,omitempty"`
 	Tables map[string]Table `toml:"tables,omitempty" json:"tables,omitempty"`
+	Model  Model            `toml:"model" json:"model"`
+	// Service
+	// API
 
 	// DriverName   string         `toml:"driver_name,omitempty" json:"driver_name,omitempty"`
 	// DriverConfig drivers.Config `toml:"driver_config,omitempty" json:"driver_config,omitempty"`

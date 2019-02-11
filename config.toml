@@ -1,19 +1,39 @@
+debug = false
+
 [db]
-  name  = "test"
-  host    = "127.0.0.1"
-  port    = 3306
-  user    = "root"
-  pass    = "123456"
-  ssl_mode = "false"
+    name  = "test"
+    host    = "127.0.0.1"
+    port    = 3306
+    user    = "root"
+    pass    = "123456"
+    ssl_mode = "false"
+    database = "test"
+    whitelist=["logs","users"]
+    blacklist=[]
 
-#blacklist = ["users"]
-debug = true
+[model]
+    package="model"
+    enabled=true
+    guregu=false
+    tags=["gorm","json"]
+    template=""
+    
+[service]
+    package="service"
+    enabled=true
+    template=""
 
-[tables.users.aliases]
-  # up_plural     = "LogQuery"
-  # up_singular   = "Log"
-  # down_plural   = "logQuery"
-  # down_singular = "log"
+[controller]
+    package="controller"
+    enabled=true
+    template=""
+
+# [tables.users.aliases]
+#   # up_plural     = "LogQuery"
+#   # up_singular   = "Log"
+#   # down_plural   = "logQuery"
+#   # down_singular = "log"
+
 [tables.users.columns.is_approved]
   alias = ""
   type     = "bool"

@@ -1,6 +1,4 @@
-package template
-
-var ModelTmpl = `package {{.PackageName}}
+package {{.PackageName}}
 
 import (
     "time"
@@ -19,8 +17,8 @@ type {{.StructName}} struct {
     {{end}}
 }
 
-// TableName sets the insert table name for this struct type
+// TableName 表名称
 func ({{.ShortStructName}} *{{.StructName}}) TableName() string {
 	return "{{.TableName}}"
 }
-`
+

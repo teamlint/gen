@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/jimsmart/schema"
-	"github.com/spf13/viper"
+	"github.com/jinzhu/inflection"
+	"github.com/teamlint/gen/config"
 )
 
 type ModelInfo struct {
@@ -15,6 +16,7 @@ type ModelInfo struct {
 	ShortStructName string
 	TableName       string
 	Fields          []string
+	Config          *config.Config
 }
 
 // commonInitialisms is a set of common initialisms.
@@ -106,9 +108,15 @@ const (
 )
 
 // GenerateStruct generates a struct for the given table.
-func GenerateStruct(db *sql.DB, tableName string, structName string, pkgName string, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) *ModelInfo {
+// func GenerateStruct(db *sql.DB, tableName string, structName string, pkgName string, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool, cfg *config.Config) *ModelInfo {
+func GenerateStruct(db *sql.DB, tableName string, cfg *config.Config) *ModelInfo {
+	pkgName := cfg.Model.Package
+	structName := FmtFieldName(tableName)
+	structName = inflection.Singular(structName)
+
 	cols, _ := schema.Table(db, tableName)
-	fields := generateFieldsTypes(db, tableName, cols, 0, jsonAnnotation, gormAnnotation, gureguTypes)
+	// fields := generateFieldsTypes(db, tableName, cols, 0, jsonAnnotation, gormAnnotation, gureguTypes, cfg)
+	fields := generateFieldsTypes(db, tableName, cols, cfg)
 
 	//fields := generateMysqlTypes(db, columnTypes, 0, jsonAnnotation, gormAnnotation, gureguTypes)
 
@@ -118,13 +126,15 @@ func GenerateStruct(db *sql.DB, tableName string, structName string, pkgName str
 		TableName:       tableName,
 		ShortStructName: strings.ToLower(string(structName[0])),
 		Fields:          fields,
+		Config:          cfg,
 	}
 
 	return modelInfo
 }
 
 // Generate fields string
-func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType, depth int, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) []string {
+// func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType, depth int, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool, cfg *config.Config) []string {
+func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType, cfg *config.Config) []string {
 
 	//sort.Strings(keys)
 
@@ -136,42 +146,63 @@ func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType
 		// valueType := sqlTypeToGoType(strings.ToLower(c.DatabaseTypeName()), nullable, gureguTypes)
 		var valueType string
 		// 自定义类型
-		var customType = viper.GetString(fmt.Sprintf("tables.%s.columns.%s.type", tableName, key))
+		// var customType = viper.GetString(fmt.Sprintf("tables.%s.columns.%s.type", tableName, key))
+		var customType = cfg.Tables[tableName].Columns[key].Type
 		if customType != "" {
-			fmt.Printf("column[%v] custom type: %v\n", key, customType)
+			if cfg.Debug {
+				fmt.Printf("column[%v] custom type: %v\n", key, customType)
+			}
 			if nullable {
 				valueType = "*" + customType
 			} else {
 				valueType = customType
 			}
 		} else {
-			valueType = sqlTypeToGoType(c, gureguTypes)
+			// valueType = sqlTypeToGoType(c, gureguTypes)
+			valueType = sqlTypeToGoType(c, cfg)
 		}
 		if valueType == "" { // unknown type
 			continue
 		}
 		// 自定义字段名
 		var fieldName string
-		var customName = viper.GetString(fmt.Sprintf("tables.%s.columns.%s.alias", tableName, key))
+		// var customName = viper.GetString(fmt.Sprintf("tables.%s.columns.%s.alias", tableName, key))
+		var customName = cfg.Tables[tableName].Columns[key].Alias
 		if customName != "" {
-			fmt.Printf("column[%v] custom name: %v\n", key, customName)
+			if cfg.Debug {
+				fmt.Printf("column[%v] custom name: %v\n", key, customName)
+			}
 			fieldName = customName
 		} else {
 			fieldName = FmtFieldName(stringifyFirstChar(key))
 		}
 
 		var annotations []string
-		if gormAnnotation == true {
-			if i == 0 {
-				annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s;primary_key\"", key))
-			} else {
-				annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s\"", key))
-			}
 
+		var configTags = cfg.Model.Tags
+		for _, tag := range configTags {
+			if strings.ToLower(tag) == "gorm" {
+				if i == 0 {
+					annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s;primary_key\"", key))
+				} else {
+					annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s\"", key))
+				}
+			} else {
+				annotations = append(annotations, fmt.Sprintf("%s:\"%s\"", tag, key))
+
+			}
 		}
-		if jsonAnnotation == true {
-			annotations = append(annotations, fmt.Sprintf("json:\"%s\"", key))
-		}
+		// if gormAnnotation == true {
+		// 	if i == 0 {
+		// 		annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s;primary_key\"", key))
+		// 	} else {
+		// 		annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s\"", key))
+		// 	}
+
+		// }
+		// if jsonAnnotation == true {
+		// 	annotations = append(annotations, fmt.Sprintf("json:\"%s\"", key))
+		// }
 		if len(annotations) > 0 {
 			field = fmt.Sprintf("%s %s `%s`",
 				fieldName,
@@ -190,12 +221,14 @@ func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType
 }
 
 // sqlTypeToGoType 数据列类型转换go类型
-func sqlTypeToGoType(col *sql.ColumnType, gureguTypes bool) string {
+// func sqlTypeToGoType(col *sql.ColumnType, gureguTypes bool) string {
+func sqlTypeToGoType(col *sql.ColumnType, cfg *config.Config) string {
 	mysqlType := strings.ToLower(col.DatabaseTypeName())
 	nullable, _ := col.Nullable()
-	// if viper.GetBool("debug") {
-	fmt.Printf("[%v] ColumnType: %+v\n", col.Name(), *col)
-	// }
+	if cfg.Debug {
+		fmt.Printf("[%v] ColumnType: %+v\n", col.Name(), *col)
+	}
+	gureguTypes := cfg.Model.Guregu
 	switch mysqlType {
 	case "tinyint", "int", "smallint", "mediumint":
 		// int

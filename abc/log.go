@@ -1,4 +1,4 @@
-package model
+package abc
 
 import (
 	"time"
@@ -17,7 +17,7 @@ type Log struct {
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at"`
 }
 
-// TableName 表名称
+// TableName sets the insert table name for this struct type
 func (l *Log) TableName() string {
 	return "logs"
 }

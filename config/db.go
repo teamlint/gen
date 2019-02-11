@@ -1,40 +1,68 @@
 package config
 
 import (
+	"database/sql"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/jimsmart/schema"
 )
 
 type DB struct {
-	Name     string `toml:"name"    json:"name"`
-	Host     string `toml:"host"    json:"host"`
-	Port     int    `toml:"port"    json:"port"`
-	User     string `toml:"user"    json:"user"`
-	Pass     string `toml:"pass"    json:"pass"`
-	SSLModel string `toml:"ssl_model" json:"ssl_model"`
+	Name      string   `toml:"name" json:"name"`
+	Host      string   `toml:"host" json:"host"`
+	Port      int      `toml:"port" json:"port"`
+	User      string   `toml:"user" json:"user"`
+	Pass      string   `toml:"pass" json:"pass"`
+	SSLMode   string   `toml:"ssl_mode" json:"ssl_mode"`
+	Database  string   `toml:"database" json:"database"`
+	Whitelist []string `toml:"whitelist" json:"whitelist"`
+	Blacklist []string `toml:"blacklist" json:"blacklist"`
 }
 
-func GetDBConnStr(user, pass, dbname, host string, port int, sslmode string) string {
+func (d *DB) GetConnStr() string {
 	config := mysql.NewConfig()
 
-	config.User = user
-	if len(pass) != 0 {
-		config.Passwd = pass
+	config.User = d.User
+	if len(d.Pass) != 0 {
+		config.Passwd = d.Pass
 	}
-	config.DBName = dbname
+	config.DBName = d.Name
 	config.Net = "tcp"
-	config.Addr = host
-	if port == 0 {
-		port = 3306
+	config.Addr = d.Host
+	if d.Port == 0 {
+		d.Port = 3306
 	}
-	config.Addr += ":" + strconv.Itoa(port)
-	config.TLSConfig = sslmode
+	config.Addr += ":" + strconv.Itoa(d.Port)
+	config.TLSConfig = d.SSLMode
 	config.Loc = time.Local
 	config.ParseTime = true
 
 	return config.FormatDSN()
+}
+func (d *DB) GetTables(db *sql.DB) []string {
+	if len(d.Whitelist) > 0 {
+		return d.Whitelist
+	}
+	tables, err := schema.TableNames(db)
+	if err != nil {
+		fmt.Println("Error in fetching tables information from mysql information schema")
+		return nil
+	}
+	if len(d.Blacklist) > 0 {
+		for i := 0; i < len(tables); i++ {
+			for _, b := range d.Blacklist {
+				if tables[i] == b {
+					// fmt.Printf("table[%v]:%v,black:%v\n", i, tables[i], b)
+					tables = append(tables[:i], tables[i+1:]...)
+					// fmt.Printf("tables=:%v\n", tables)
+				}
+			}
+		}
+	}
+	return tables
 }
 
 /*
