@@ -30,7 +30,7 @@ type User struct {
 	Fee2        float64     `gorm:"column:fee2" json:"fee2"`
 }
 
-// TableName 表名称
+// TableName sets the table name for this struct type
 func (u *User) TableName() string {
 	return "users"
 }

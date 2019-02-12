@@ -32,15 +32,15 @@ var (
 	// sqlDatabase = goopt.String([]string{"-d", "--database"}, "nil", "Database to for connection")
 	// sqlTable    = goopt.String([]string{"-t", "--table"}, "", "Table to build struct from")
 
-	packageName = goopt.String([]string{"--package"}, "", "name to set for package")
+	// packageName = goopt.String([]string{"--package"}, "", "name to set for package")
 
 	// jsonAnnotation = goopt.Flag([]string{"--json"}, []string{"--no-json"}, "Add json annotations (default)", "Disable json annotations")
 	// gormAnnotation = goopt.Flag([]string{"--gorm"}, []string{}, "Add gorm annotations (tags)", "")
 	// gureguTypes    = goopt.Flag([]string{"--guregu"}, []string{}, "Add guregu null types", "")
 
-	rest = goopt.Flag([]string{"--rest"}, []string{}, "Enable generating RESTful api", "")
+	// rest = goopt.Flag([]string{"--rest"}, []string{}, "Enable generating RESTful api", "")
 
-	verbose = goopt.Flag([]string{"-v", "--verbose"}, []string{}, "Enable verbose output", "")
+	// verbose = goopt.Flag([]string{"-v", "--verbose"}, []string{}, "Enable verbose output", "")
 )
 
 func init() {
@@ -64,7 +64,12 @@ func initConfig() {
 	vConfig.SetConfigName("config")
 	vConfig.AddConfigPath(".") // optionally look for config in the working directory
 	vConfig.SetDefault("model.enabled", true)
-	vConfig.SetDefault("model.package", "abc")
+	vConfig.SetDefault("model.package", "model")
+	vConfig.SetDefault("model.import", "model")
+	vConfig.SetDefault("query.enabled", true)
+	vConfig.SetDefault("query.base", true)
+	vConfig.SetDefault("query.package", "query")
+	vConfig.SetDefault("query.import", "model/query")
 	err := vConfig.ReadInConfig() // Find and read the config file
 	if err != nil {               // Handle errors reading the config file
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
@@ -88,6 +93,7 @@ func initConfig() {
 	// model default
 	defaultPkgName := vConfig.GetString("model.package")
 	modelConfig.Package = defaultPkgName
+	modelConfig.Import = vConfig.GetString("model.import")
 	modelConfig.Enabled = vConfig.GetBool("model.enabled")
 	cfg.Model = modelConfig
 	// tables config
@@ -97,6 +103,25 @@ func initConfig() {
 		fmt.Printf("table config read err: %v\n", err)
 	}
 	cfg.Tables = tableConfig
+	// query config
+	var queryConfig config.Query
+	err = vConfig.UnmarshalKey("query", &queryConfig)
+	if err != nil {
+		fmt.Printf("query config read err: %v\n", err)
+	}
+	// query default
+	queryConfig.Package = vConfig.GetString("query.package")
+	queryConfig.Import = vConfig.GetString("query.import")
+	queryConfig.Enabled = vConfig.GetBool("query.enabled")
+	queryConfig.Base = vConfig.GetBool("query.base")
+	cfg.Query = queryConfig
+	// service config
+	var serviceConfig config.Service
+	err = vConfig.UnmarshalKey("service", &serviceConfig)
+	if err != nil {
+		fmt.Printf("service config read err: %v\n", err)
+	}
+	cfg.Service = serviceConfig
 
 	if cfg.Debug {
 		fmt.Printf("viper config: %+v\n", *vConfig)
@@ -110,6 +135,9 @@ func main() {
 	var db *sql.DB
 
 	sqlConnStr := cfg.DB.GetConnStr()
+	if cfg.Debug {
+		fmt.Printf("sql connection string is %s\n", sqlConnStr)
+	}
 	if sqlConnStr == "" {
 		fmt.Println("sql connection string is required! Add it with --connstr=s")
 		return
@@ -127,32 +155,31 @@ func main() {
 	}
 	defer db.Close()
 
-	// if packageName is not set we need to default it
-	if packageName == nil || *packageName == "" {
-		*packageName = "generated"
-	}
+	// apiName := "api"
+	// if *rest {
+	// 	os.Mkdir(apiName, 0777)
+	// }
 
-	apiName := "api"
-	if *rest {
-		os.Mkdir(apiName, 0777)
-	}
-
-	ct, err := getTemplate(gtmpl.ControllerTmpl)
-	if err != nil {
-		fmt.Println("Error in loading controller template: " + err.Error())
-		return
-	}
+	// ct, err := getTemplate(gtmpl.ControllerTmpl)
+	// if err != nil {
+	// 	fmt.Println("Error in loading controller template: " + err.Error())
+	// 	return
+	// }
 
 	// parse or read tables
 
-	tables := cfg.DB.GetTables(db)
+	// tables := cfg.DB.GetTables(db)
 
-	_ = ct
-	_ = tables
+	// _ = ct
+	// _ = tables
 	genModel(db, cfg)
+	genQuery(db, cfg)
+	genService(db, cfg)
 	// genController(apiName, ct, tables)
 
 }
+
+/*
 func genController(apiName string, ct *template.Template, tables []string) {
 	if *rest {
 		var structNames []string
@@ -195,6 +222,7 @@ func genController(apiName string, ct *template.Template, tables []string) {
 		ioutil.WriteFile(filepath.Join(apiName, "router.go"), data, 0777)
 	}
 }
+*/
 
 // func genModel(dirName string, db *sql.DB, t *template.Template, tables []string) {
 func genModel(db *sql.DB, cfg *config.Config) {
@@ -207,21 +235,20 @@ func genModel(db *sql.DB, cfg *config.Config) {
 	pkgName := cfg.Model.Package
 	os.Mkdir(pkgName, 0777)
 
-	// t, err := getTemplate(gtmpl.ModelTmpl)
-	t, err := getFileTemplate("templates/model.tpl")
+	var t *template.Template
+	var err error
+	if cfg.Model.Template == "" {
+		t, err = getTemplate(gtmpl.ModelTmpl)
+	} else {
+		t, err = getFileTemplate(cfg.Model.Template)
+	}
 	if err != nil {
 		fmt.Println("Error in loading model template: " + err.Error())
 		return
 	}
-	var structNames []string
 	// generate go files for each table
 	tables := cfg.DB.GetTables(db)
 	for _, tableName := range tables {
-		structName := dbmeta.FmtFieldName(tableName)
-		structName = inflection.Singular(structName)
-		structNames = append(structNames, structName)
-
-		// modelInfo := dbmeta.GenerateStruct(db, tableName, structName, pkgName, *jsonAnnotation, *gormAnnotation, *gureguTypes, cfg)
 		modelInfo := dbmeta.GenerateStruct(db, tableName, cfg)
 
 		var buf bytes.Buffer
@@ -232,12 +259,117 @@ func genModel(db *sql.DB, cfg *config.Config) {
 		}
 		data, err := format.Source(buf.Bytes())
 		if err != nil {
-			fmt.Println("Error in formating source: " + err.Error())
+			fmt.Println("Error in formating model source: " + err.Error())
 			return
 		}
 		ioutil.WriteFile(filepath.Join(pkgName, inflection.Singular(tableName)+".go"), data, 0777)
 
-		// ioutil.WriteFile(filepath.Join(pkgName, inflection.Singular(tableName)+".go"), buf.Bytes(), 0777)
+		// extension
+	}
+}
+func genQuery(db *sql.DB, cfg *config.Config) {
+	if !cfg.Query.Enabled {
+		if cfg.Debug {
+			fmt.Printf("query config enabled: %v\n", cfg.Query.Enabled)
+		}
+		return
+	}
+	modelPkgName := cfg.Model.Package
+	pkgName := cfg.Query.Package
+	os.Mkdir(filepath.Join(modelPkgName, pkgName), 0777)
+
+	// query base
+	if cfg.Query.Base {
+		base, err := getTemplate(gtmpl.QueryBaseTmpl)
+		if err != nil {
+			fmt.Println("Error in loading query template: " + err.Error())
+			return
+		}
+
+		var buf bytes.Buffer
+		queryInfo := dbmeta.QueryInfo{Config: cfg}
+		err = base.Execute(&buf, queryInfo)
+		if err != nil {
+			fmt.Println("Error in rendering query base: " + err.Error())
+			return
+		}
+		data, err := format.Source(buf.Bytes())
+		if err != nil {
+			fmt.Println("Error in formating query base source: " + err.Error())
+			return
+		}
+		ioutil.WriteFile(filepath.Join(modelPkgName, pkgName, "base.go"), data, 0777)
+	}
+	// query
+	var t *template.Template
+	var err error
+	if cfg.Query.Template == "" {
+		t, err = getTemplate(gtmpl.QueryTmpl)
+	} else {
+		t, err = getFileTemplate(cfg.Query.Template)
+	}
+	if err != nil {
+		fmt.Println("Error in loading query template: " + err.Error())
+		return
+	}
+	// var structNames []string
+	// generate go files for each table query
+	tables := cfg.DB.GetTables(db)
+	for _, tableName := range tables {
+		modelInfo := dbmeta.GenerateStruct(db, tableName, cfg)
+
+		var buf bytes.Buffer
+		err := t.Execute(&buf, modelInfo)
+		if err != nil {
+			fmt.Println("Error in rendering model query: " + err.Error())
+			return
+		}
+		data, err := format.Source(buf.Bytes())
+		if err != nil {
+			fmt.Println("Error in formating model query source: " + err.Error())
+			return
+		}
+		ioutil.WriteFile(filepath.Join(modelPkgName, pkgName, inflection.Singular(tableName)+".go"), data, 0777)
+	}
+}
+func genService(db *sql.DB, cfg *config.Config) {
+	if !cfg.Service.Enabled {
+		if cfg.Debug {
+			fmt.Printf("service config enabled: %v\n", cfg.Service.Enabled)
+		}
+		return
+	}
+	pkgName := cfg.Service.Package
+	os.Mkdir(pkgName, 0777)
+
+	var t *template.Template
+	var err error
+	if cfg.Service.Template == "" {
+		t, err = getTemplate(gtmpl.ServiceTmpl)
+	} else {
+		t, err = getFileTemplate(cfg.Service.Template)
+	}
+	if err != nil {
+		fmt.Println("Error in loading service template: " + err.Error())
+		return
+	}
+	// generate go files for each table
+	tables := cfg.DB.GetTables(db)
+	for _, tableName := range tables {
+		modelInfo := dbmeta.GenerateStruct(db, tableName, cfg)
+
+		var buf bytes.Buffer
+		err := t.Execute(&buf, modelInfo)
+		if err != nil {
+			fmt.Println("Error in rendering service: " + err.Error())
+			return
+		}
+		data, err := format.Source(buf.Bytes())
+		if err != nil {
+			fmt.Println("Error in formating service source: " + err.Error())
+			return
+		}
+		ioutil.WriteFile(filepath.Join(pkgName, inflection.Singular(tableName)+".go"), data, 0777)
 	}
 
 }

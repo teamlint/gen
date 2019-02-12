@@ -18,6 +18,9 @@ type ModelInfo struct {
 	Fields          []string
 	Config          *config.Config
 }
+type QueryInfo struct {
+	Config *config.Config
+}
 
 // commonInitialisms is a set of common initialisms.
 // Only add entries that are highly unlikely to be non-initialisms.

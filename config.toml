@@ -1,4 +1,4 @@
-debug = false
+debug = true
 
 [db]
     name  = "test"
@@ -13,10 +13,17 @@ debug = false
 
 [model]
     package="model"
+    import="github.com/teamlint/gen/model"
     enabled=true
     guregu=false
     tags=["gorm","json"]
-    template=""
+    # template="templates/model.tpl"
+
+[query]
+    package="query"
+    import="github.com/teamlint/gen/model/query"
+    enabled=true
+    base=true
     
 [service]
     package="service"

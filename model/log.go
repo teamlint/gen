@@ -17,7 +17,7 @@ type Log struct {
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at"`
 }
 
-// TableName 表名称
+// TableName sets the table name for this struct type
 func (l *Log) TableName() string {
 	return "logs"
 }
