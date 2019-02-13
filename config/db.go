@@ -17,7 +17,6 @@ type DB struct {
 	User      string   `toml:"user" json:"user"`
 	Pass      string   `toml:"pass" json:"pass"`
 	SSLMode   string   `toml:"ssl_mode" json:"ssl_mode"`
-	Database  string   `toml:"database" json:"database"`
 	Whitelist []string `toml:"whitelist" json:"whitelist"`
 	Blacklist []string `toml:"blacklist" json:"blacklist"`
 }

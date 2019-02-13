@@ -122,8 +122,8 @@ func main() {
 		return
 	}
 
-	if cfg.DB.Database == "" {
-		fmt.Println("Database can not be null")
+	if cfg.DB.Name == "" {
+		fmt.Println("database can not be null")
 		return
 	}
 
