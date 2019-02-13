@@ -10,6 +10,7 @@ type Base struct {
 	SortName   string `form:"sortName" json:"sort_name"`
 	SortOrder  string `form:"sortOrder" json:"sort_order"`
 	SearchText string `form:"searchText" json:"search_text"`
+	OrderBy    string `form:"orderBy" json:"order_by"`
 }
 
 // PagedScopes 分页查询拼接
@@ -50,6 +51,19 @@ func (b *Base) OrderScopes(defaultOrder ...string) func(db *gorm.DB) *gorm.DB {
 			}
 		}
 		return db.Order(b.SortName + " " + b.SortOrder)
+	}
+}
+
+// OrdeyByScopes 多排序
+func (b *Base) OrderByScopes() func(db *gorm.DB) *gorm.DB {
+	if ok, fn := b.IsNil(); ok {
+		return fn
+	}
+	return func(db *gorm.DB) *gorm.DB {
+		if b.OrderBy != "" {
+			return db.Order(b.OrderBy)
+		}
+		return db
 	}
 }
 

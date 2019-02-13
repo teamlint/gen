@@ -19,7 +19,6 @@ type {{.StructName}} struct {
     {{end}}
 }
 
-// TableName sets the table name for this struct type
 func ({{.ShortStructName}} *{{.StructName}}) TableName() string {
 	return "{{.TableName}}"
 }

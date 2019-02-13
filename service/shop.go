@@ -2,30 +2,32 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/teamlint/gen/model"
 	"github.com/teamlint/gen/model/query"
 )
 
-// LogService log service interface
-type LogService interface {
-	Create(item *model.Log) error
-	Get(id interface{}, unscoped ...bool) (*model.Log, error)
-	Update(item *model.Log) error
-	UpdateSel(item *model.Log, sel []string) error
+// ShopService shop service interface
+type ShopService interface {
+	Create(item *model.Shop) error
+	Get(id interface{}, unscoped ...bool) (*model.Shop, error)
+	Update(item *model.Shop) error
+	UpdateSel(item *model.Shop, sel []string) error
 	Delete(id interface{}, unscoped ...bool) error
-	GetList(base *query.Base, q *query.Log) ([]*model.Log, int, error)
+	Undelete(id interface{}) error
+	GetList(base *query.Base, q *query.Shop) ([]*model.Shop, int, error)
 }
-type logService struct {
+type shopService struct {
 	DB *gorm.DB
 }
 
-func NewLogService(db *gorm.DB) LogService {
-	return &logService{db}
+func NewShopService(db *gorm.DB) ShopService {
+	return &shopService{db}
 }
 
-func (s *logService) Create(item *model.Log) (err error) {
+func (s *shopService) Create(item *model.Shop) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -45,8 +47,8 @@ func (s *logService) Create(item *model.Log) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *logService) Get(id interface{}, unscoped ...bool) (*model.Log, error) {
-	var item model.Log
+func (s *shopService) Get(id interface{}, unscoped ...bool) (*model.Shop, error) {
+	var item model.Shop
 
 	var permanently bool
 	if len(unscoped) > 0 && unscoped[0] {
@@ -59,7 +61,7 @@ func (s *logService) Get(id interface{}, unscoped ...bool) (*model.Log, error) {
 	return &item, nil
 }
 
-func (s *logService) Update(item *model.Log) (err error) {
+func (s *shopService) Update(item *model.Shop) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -79,7 +81,7 @@ func (s *logService) Update(item *model.Log) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *logService) UpdateSel(item *model.Log, sel []string) (err error) {
+func (s *shopService) UpdateSel(item *model.Shop, sel []string) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -90,6 +92,8 @@ func (s *logService) UpdateSel(item *model.Log, sel []string) (err error) {
 			err = fmt.Errorf("%v", r)
 		}
 	}()
+	item.UpdatedAt = time.Now()
+	sel = append(sel, "updated_at")
 	if e := tx.Unscoped().Select(sel).Save(item).Error; e != nil {
 		tx.Rollback()
 		return e
@@ -98,7 +102,7 @@ func (s *logService) UpdateSel(item *model.Log, sel []string) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *logService) Delete(id interface{}, unscoped ...bool) (err error) {
+func (s *shopService) Delete(id interface{}, unscoped ...bool) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -113,7 +117,7 @@ func (s *logService) Delete(id interface{}, unscoped ...bool) (err error) {
 	if len(unscoped) > 0 && unscoped[0] {
 		permanently = true
 	}
-	if e := tx.Scopes(query.Unscoped(permanently)).Where("id=?", id).Delete(&model.Log{}).Error; e != nil {
+	if e := tx.Scopes(query.Unscoped(permanently)).Where("id=?", id).Delete(&model.Shop{}).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -121,11 +125,30 @@ func (s *logService) Delete(id interface{}, unscoped ...bool) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *logService) GetList(base *query.Base, q *query.Log) ([]*model.Log, int, error) {
-	var items []*model.Log
+func (s *shopService) Undelete(id interface{}) (err error) {
+	tx := s.DB.Begin()
+	if tx.Error != nil {
+		err = tx.Error
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	if e := tx.Model(&model.Shop{}).Unscoped().Where("id=?", id).Update("deleted_at", nil).Error; e != nil {
+		tx.Rollback()
+		return e
+	}
+
+	return tx.Commit().Error
+}
+
+func (s *shopService) GetList(base *query.Base, q *query.Shop) ([]*model.Shop, int, error) {
+	var items []*model.Shop
 	var total int
 
-	db := s.DB.Model(&model.Log{}).
+	db := s.DB.Model(&model.Shop{}).
 		Scopes(base.OrderScopes()).
 		Scopes(base.OrderByScopes()).
 		Scopes(q.QueryScopes())

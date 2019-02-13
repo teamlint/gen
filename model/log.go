@@ -14,10 +14,8 @@ type Log struct {
 	Username  *string    `gorm:"column:username" json:"username"`
 	Content   *string    `gorm:"column:content" json:"content"`
 	CreatedAt *time.Time `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at"`
 }
 
-// TableName sets the table name for this struct type
 func (l *Log) TableName() string {
 	return "logs"
 }

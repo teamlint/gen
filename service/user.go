@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/teamlint/gen/model"
@@ -15,6 +16,7 @@ type UserService interface {
 	Update(item *model.User) error
 	UpdateSel(item *model.User, sel []string) error
 	Delete(id interface{}, unscoped ...bool) error
+	Undelete(id interface{}) error
 	GetList(base *query.Base, q *query.User) ([]*model.User, int, error)
 }
 type userService struct {
@@ -71,7 +73,7 @@ func (s *userService) Update(item *model.User) (err error) {
 		}
 	}()
 
-	if e := tx.Save(item).Error; e != nil {
+	if e := tx.Unscoped().Save(item).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -90,8 +92,9 @@ func (s *userService) UpdateSel(item *model.User, sel []string) (err error) {
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-
-	if e := tx.Select(sel).Save(item).Error; e != nil {
+	item.UpdatedAt = time.Now()
+	sel = append(sel, "updated_at")
+	if e := tx.Unscoped().Select(sel).Save(item).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -122,12 +125,32 @@ func (s *userService) Delete(id interface{}, unscoped ...bool) (err error) {
 	return tx.Commit().Error
 }
 
+func (s *userService) Undelete(id interface{}) (err error) {
+	tx := s.DB.Begin()
+	if tx.Error != nil {
+		err = tx.Error
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	if e := tx.Model(&model.User{}).Unscoped().Where("id=?", id).Update("deleted_at", nil).Error; e != nil {
+		tx.Rollback()
+		return e
+	}
+
+	return tx.Commit().Error
+}
+
 func (s *userService) GetList(base *query.Base, q *query.User) ([]*model.User, int, error) {
 	var items []*model.User
 	var total int
 
 	db := s.DB.Model(&model.User{}).
 		Scopes(base.OrderScopes()).
+		Scopes(base.OrderByScopes()).
 		Scopes(q.QueryScopes())
 	err := db.Count(&total).Scopes(base.PagedScopes()).Scan(&items).Error
 

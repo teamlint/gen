@@ -11,14 +11,14 @@ import (
 	"strings"
 	"text/template"
 
-	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/droundy/goopt"
+	// _ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/jinzhu/inflection"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+
+	// _ "github.com/lib/pq"
+	// _ "github.com/mattn/go-sqlite3"
 	"github.com/serenize/snaker"
-	jww "github.com/spf13/jwalterweatherman"
+	// jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 	"github.com/teamlint/gen/config"
 	"github.com/teamlint/gen/dbmeta"
@@ -28,37 +28,15 @@ import (
 var (
 	vConfig *viper.Viper
 	cfg     *config.Config
-	// sqlConnStr  = goopt.String([]string{"-c", "--connstr"}, "nil", "database connection string")
-	// sqlDatabase = goopt.String([]string{"-d", "--database"}, "nil", "Database to for connection")
-	// sqlTable    = goopt.String([]string{"-t", "--table"}, "", "Table to build struct from")
-
-	// packageName = goopt.String([]string{"--package"}, "", "name to set for package")
-
-	// jsonAnnotation = goopt.Flag([]string{"--json"}, []string{"--no-json"}, "Add json annotations (default)", "Disable json annotations")
-	// gormAnnotation = goopt.Flag([]string{"--gorm"}, []string{}, "Add gorm annotations (tags)", "")
-	// gureguTypes    = goopt.Flag([]string{"--guregu"}, []string{}, "Add guregu null types", "")
-
-	// rest = goopt.Flag([]string{"--rest"}, []string{}, "Enable generating RESTful api", "")
-
-	// verbose = goopt.Flag([]string{"-v", "--verbose"}, []string{}, "Enable verbose output", "")
 )
 
 func init() {
-	// Setup goopts
-	// goopt.Description = func() string {
-	// 	return "ORM and RESTful API generator for Mysql"
-	// }
-	// goopt.Version = "0.1"
-	// goopt.Summary = `gen [-v] --connstr "user:password@/dbname" --package pkgName --database databaseName --table tableName [--json] [--gorm] [--guregu]`
-
-	//Parse options
-	goopt.Parse(nil)
 	// config
 	initConfig()
 
 }
 func initConfig() {
-	jww.SetLogThreshold(jww.LevelWarn)
+	// jww.SetLogThreshold(jww.LevelWarn)
 	// config
 	vConfig = viper.New()
 	vConfig.SetConfigName("config")
@@ -75,7 +53,9 @@ func initConfig() {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 	cfg = &config.Config{
-		Debug: vConfig.GetBool("debug"),
+		Debug:  vConfig.GetBool("debug"),
+		Prefix: vConfig.GetString("prefix"),
+		Suffix: vConfig.GetString("suffix"),
 	}
 	// db config
 	var dbConfig config.DB
@@ -127,7 +107,6 @@ func initConfig() {
 		fmt.Printf("viper config: %+v\n", *vConfig)
 		fmt.Printf("app config: %+v\n", *cfg)
 	}
-
 }
 
 func main() {
@@ -155,23 +134,6 @@ func main() {
 	}
 	defer db.Close()
 
-	// apiName := "api"
-	// if *rest {
-	// 	os.Mkdir(apiName, 0777)
-	// }
-
-	// ct, err := getTemplate(gtmpl.ControllerTmpl)
-	// if err != nil {
-	// 	fmt.Println("Error in loading controller template: " + err.Error())
-	// 	return
-	// }
-
-	// parse or read tables
-
-	// tables := cfg.DB.GetTables(db)
-
-	// _ = ct
-	// _ = tables
 	genModel(db, cfg)
 	genQuery(db, cfg)
 	genService(db, cfg)
@@ -262,15 +224,15 @@ func genModel(db *sql.DB, cfg *config.Config) {
 			fmt.Println("Error in formating model source: " + err.Error())
 			return
 		}
-		ioutil.WriteFile(filepath.Join(pkgName, inflection.Singular(tableName)+".go"), data, 0777)
+		ioutil.WriteFile(filepath.Join(pkgName, cfg.Prefix+inflection.Singular(tableName)+cfg.Suffix+".go"), data, 0777)
 
 		// extension
 	}
 }
 func genQuery(db *sql.DB, cfg *config.Config) {
-	if !cfg.Query.Enabled {
+	if !cfg.Query.Enabled && !cfg.Query.Base {
 		if cfg.Debug {
-			fmt.Printf("query config enabled: %v\n", cfg.Query.Enabled)
+			fmt.Println("base query & query config disabled")
 		}
 		return
 	}
@@ -298,9 +260,15 @@ func genQuery(db *sql.DB, cfg *config.Config) {
 			fmt.Println("Error in formating query base source: " + err.Error())
 			return
 		}
-		ioutil.WriteFile(filepath.Join(modelPkgName, pkgName, "base.go"), data, 0777)
+		ioutil.WriteFile(filepath.Join(modelPkgName, pkgName, cfg.Prefix+"base"+cfg.Suffix+".go"), data, 0777)
 	}
 	// query
+	if !cfg.Query.Enabled {
+		if cfg.Debug {
+			fmt.Printf("query config enabled: %v\n", cfg.Query.Enabled)
+		}
+		return
+	}
 	var t *template.Template
 	var err error
 	if cfg.Query.Template == "" {
@@ -329,7 +297,7 @@ func genQuery(db *sql.DB, cfg *config.Config) {
 			fmt.Println("Error in formating model query source: " + err.Error())
 			return
 		}
-		ioutil.WriteFile(filepath.Join(modelPkgName, pkgName, inflection.Singular(tableName)+".go"), data, 0777)
+		ioutil.WriteFile(filepath.Join(modelPkgName, pkgName, cfg.Prefix+inflection.Singular(tableName)+cfg.Suffix+".go"), data, 0777)
 	}
 }
 func genService(db *sql.DB, cfg *config.Config) {
@@ -369,7 +337,7 @@ func genService(db *sql.DB, cfg *config.Config) {
 			fmt.Println("Error in formating service source: " + err.Error())
 			return
 		}
-		ioutil.WriteFile(filepath.Join(pkgName, inflection.Singular(tableName)+".go"), data, 0777)
+		ioutil.WriteFile(filepath.Join(pkgName, cfg.Prefix+inflection.Singular(tableName)+cfg.Suffix+".go"), data, 0777)
 	}
 
 }

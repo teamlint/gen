@@ -16,8 +16,10 @@ type ModelInfo struct {
 	ShortStructName string
 	TableName       string
 	Fields          []string
+	Helper          *Helper
 	Config          *config.Config
 }
+
 type QueryInfo struct {
 	Config *config.Config
 }
@@ -122,6 +124,7 @@ func GenerateStruct(db *sql.DB, tableName string, cfg *config.Config) *ModelInfo
 	fields := generateFieldsTypes(db, tableName, cols, cfg)
 
 	//fields := generateMysqlTypes(db, columnTypes, 0, jsonAnnotation, gormAnnotation, gureguTypes)
+	helper := Helper{Cols: cols}
 
 	var modelInfo = &ModelInfo{
 		PackageName:     pkgName,
@@ -130,6 +133,7 @@ func GenerateStruct(db *sql.DB, tableName string, cfg *config.Config) *ModelInfo
 		ShortStructName: strings.ToLower(string(structName[0])),
 		Fields:          fields,
 		Config:          cfg,
+		Helper:          &helper,
 	}
 
 	return modelInfo

@@ -1,4 +1,6 @@
-debug = true
+debug  = true
+prefix = ""
+suffix = ""
 
 [db]
     name  = "test"
@@ -8,7 +10,7 @@ debug = true
     pass    = "123456"
     ssl_mode = "false"
     database = "test"
-    whitelist=["logs","users"]
+    # whitelist=["logs","users"]
     blacklist=[]
 
 [model]
@@ -24,16 +26,16 @@ debug = true
     import="github.com/teamlint/gen/model/query"
     enabled=true
     base=true
-    
+
 [service]
     package="service"
     enabled=true
     template=""
 
-[controller]
-    package="controller"
-    enabled=true
-    template=""
+# [controller]
+#     package="controller"
+#     enabled=true
+#     template=""
 
 # [tables.users.aliases]
 #   # up_plural     = "LogQuery"
@@ -42,46 +44,10 @@ debug = true
 #   # down_singular = "log"
 
 [tables.users.columns.is_approved]
-  alias = ""
-  type     = "bool"
+    alias = ""
+    type  = "bool"
 
 [tables.users.columns.gender]
-  alias = "Sex"
-  type     = "UserGender"
-
-# [aliases.tables.users.columns]
-#   pid = "PID"
-#   money = "Price"
-
-
-# templates = [
-#   # "/venjiang/go/src/github.com/volatiletech/sqlboiler/templates",
-#   # "/venjiang/go/src/github.com/volatiletech/sqlboiler/templates_test",
-#   "/venjiang/go/src/test/sql/boiler/orm/templates"
-# ]
-
-# [[types]]
-#   [types.match]
-#     type = "null.Time"
-#     nullable = true
-#   [types.replace]
-#     type = "*time.Time"
-
-# [[types]]
-#   [types.match]
-#     type = "null.String"
-#     nullable = true
-#   [types.replace]
-#     type = "string"
-
-
-# [[types]]
-#   [types.match]
-#     type = "null.Int"
-#     nullable = true
-#   [types.replace]
-#     type = "int"
-
-  #[types.imports]
-  #  third_party = ['"github.com/me/mynull"']
+    alias = "Sex"
+    type  = "UserGender"
 

@@ -4,7 +4,9 @@ var ServiceTmpl = `package {{.Config.Service.Package}}
 
 import (
 	"fmt"
-
+	{{if .Helper.HasField "updated_at" -}}
+	"time"
+	{{end}}
 	"{{.Config.Model.Import}}"
 	"{{.Config.Query.Import}}"
 	"github.com/jinzhu/gorm"
@@ -17,6 +19,9 @@ type {{.StructName}}Service interface {
 	Update(item *{{.PackageName}}.{{.StructName}}) error
 	UpdateSel(item *{{.PackageName}}.{{.StructName}}, sel []string) error
 	Delete(id interface{}, unscoped ...bool) error
+	{{if .Helper.HasField "deleted_at" -}}
+	Undelete(id interface{}) error
+	{{end -}}
 	GetList(base *query.Base, q *query.{{.StructName}}) ([]*{{.PackageName}}.{{.StructName}}, int, error)
 }
 type {{.StructName|toLower}}Service struct {
@@ -73,7 +78,7 @@ func (s *{{.StructName|toLower}}Service) Update(item *{{.PackageName}}.{{.Struct
 		}
 	}()
 
-	if e := tx.Save(item).Error; e != nil {
+	if e := tx.Unscoped().Save(item).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -92,8 +97,11 @@ func (s *{{.StructName|toLower}}Service) UpdateSel(item *{{.PackageName}}.{{.Str
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-
-	if e := tx.Select(sel).Save(item).Error; e != nil {
+	{{if .Helper.HasField "updated_at" -}}
+	item.UpdatedAt = time.Now()
+	sel = append(sel, "updated_at")
+	{{end -}}
+	if e := tx.Unscoped().Select(sel).Save(item).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -124,12 +132,34 @@ func (s *{{.StructName|toLower}}Service) Delete(id interface{}, unscoped ...bool
 	return tx.Commit().Error
 }
 
+{{if .Helper.HasField "deleted_at" -}}
+func (s *{{.StructName|toLower}}Service) Undelete(id interface{}) (err error) {
+	tx := s.DB.Begin()
+	if tx.Error != nil {
+		err = tx.Error
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	if e := tx.Model(&{{.PackageName}}.{{.StructName}}{}).Unscoped().Where("id=?", id).Update("deleted_at",nil).Error; e != nil {
+		tx.Rollback()
+		return e
+	}
+
+	return tx.Commit().Error
+}
+{{end}}
+
 func (s *{{.StructName|toLower}}Service) GetList(base *query.Base, q *query.{{.StructName}}) ([]*{{.PackageName}}.{{.StructName}}, int, error) {
 	var items []*{{.PackageName}}.{{.StructName}}
 	var total int
 
 	db := s.DB.Model(&{{.PackageName}}.{{.StructName}}{}).
 		Scopes(base.OrderScopes()).
+		Scopes(base.OrderByScopes()).
 		Scopes(q.QueryScopes())
 	err := db.Count(&total).Scopes(base.PagedScopes()).Scan(&items).Error
 
