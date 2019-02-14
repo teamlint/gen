@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teamlint/gen/errors"
 	"github.com/teamlint/gen/model"
 	"github.com/teamlint/gen/model/query"
 )
@@ -38,6 +39,10 @@ func TestModelJSON(t *testing.T) {
 func TestUserGet(t *testing.T) {
 	user, err := userService.Get(1, false)
 	if err != nil {
+		if err == errors.ErrRecordNotFound {
+			t.Errorf("自定义错误")
+			return
+		}
 		t.Error(err)
 		return
 	}
@@ -115,7 +120,7 @@ func TestUserQuery(t *testing.T) {
 	b := query.Base{PageNumber: 1, PageSize: 3}
 	b.OrderBy = "money desc,id"
 	q := query.User{Gender: model.UserGenderMan}
-	items, total, err := userService.GetList(&b, &q)
+	items, total, err := customUserService.GetList(&b, &q)
 	if err != nil {
 		t.Error(err)
 		return
@@ -125,4 +130,17 @@ func TestUserQuery(t *testing.T) {
 	for i, v := range items {
 		t.Logf("users[%v]: %+v\n", i, *v)
 	}
+}
+
+func TestUserGetByName(t *testing.T) {
+	user, err := customUserService.GetByName("abc")
+	if err != nil {
+		if err == errors.ErrRecordNotFound {
+			t.Errorf("没有找到用户")
+			return
+		}
+		t.Error(err)
+		return
+	}
+	t.Logf("user: %+v\n", user)
 }

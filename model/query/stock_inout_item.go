@@ -2,14 +2,12 @@ package query
 
 import (
 	"github.com/jinzhu/gorm"
-	"github.com/teamlint/gen/model"
 )
 
-type User struct {
-	Gender model.UserGender
+type StockInoutItem struct {
 }
 
-func (q *User) QueryScopes() func(db *gorm.DB) *gorm.DB {
+func (q *StockInoutItem) QueryScopes() func(db *gorm.DB) *gorm.DB {
 	if q == nil {
 		return func(db *gorm.DB) *gorm.DB {
 			return db

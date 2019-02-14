@@ -8,15 +8,6 @@ import (
 	"github.com/teamlint/gen/model/query"
 )
 
-// LogService log service interface
-type LogService interface {
-	Create(item *model.Log) error
-	Get(id interface{}, unscoped ...bool) (*model.Log, error)
-	Update(item *model.Log) error
-	UpdateSel(item *model.Log, sel []string) error
-	Delete(id interface{}, unscoped ...bool) error
-	GetList(base *query.Base, q *query.Log) ([]*model.Log, int, error)
-}
 type logService struct {
 	DB *gorm.DB
 }
@@ -53,6 +44,9 @@ func (s *logService) Get(id interface{}, unscoped ...bool) (*model.Log, error) {
 		permanently = true
 	}
 	if err := s.DB.Scopes(query.Unscoped(permanently)).Where("id=?", id).Take(&item).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, model.ErrRecordNotFound
+		}
 		return nil, err
 	}
 

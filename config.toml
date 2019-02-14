@@ -9,7 +9,6 @@ suffix = ""
     user    = "root"
     pass    = "123456"
     ssl_mode = "false"
-    database = "test"
     # whitelist=["logs","users"]
     blacklist=[]
 
@@ -17,6 +16,7 @@ suffix = ""
     package="model"
     import="github.com/teamlint/gen/model"
     enabled=true
+    base=true
     guregu=false
     tags=["gorm","json"]
     # template="templates/model.tpl"
@@ -24,12 +24,14 @@ suffix = ""
 [query]
     package="query"
     import="github.com/teamlint/gen/model/query"
-    enabled=false
+    enabled=true
     base=true
+    template=""
 
 [service]
     package="service"
     enabled=true
+    interface=true
     template=""
 
 # [controller]

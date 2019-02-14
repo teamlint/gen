@@ -12,27 +12,15 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// {{.StructName}}Service {{.StructName|toLower}} service interface
-type {{.StructName}}Service interface {
-	Create(item *{{.PackageName}}.{{.StructName}}) error
-	Get(id interface{}, unscoped ...bool) (*{{.PackageName}}.{{.StructName}}, error)
-	Update(item *{{.PackageName}}.{{.StructName}}) error
-	UpdateSel(item *{{.PackageName}}.{{.StructName}}, sel []string) error
-	Delete(id interface{}, unscoped ...bool) error
-	{{if .Helper.HasField "deleted_at" -}}
-	Undelete(id interface{}) error
-	{{end -}}
-	GetList(base *query.Base, q *query.{{.StructName}}) ([]*{{.PackageName}}.{{.StructName}}, int, error)
-}
-type {{.StructName|toLower}}Service struct {
+type {{.StructName|toLowerCamelCase}}Service struct {
 	DB *gorm.DB
 }
 
 func New{{.StructName}}Service(db *gorm.DB) {{.StructName}}Service {
-	return &{{.StructName|toLower}}Service{db}
+	return &{{.StructName|toLowerCamelCase}}Service{db}
 }
 
-func (s *{{.StructName|toLower}}Service) Create(item *{{.PackageName}}.{{.StructName}}) (err error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) Create(item *{{.PackageName}}.{{.StructName}}) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -52,7 +40,7 @@ func (s *{{.StructName|toLower}}Service) Create(item *{{.PackageName}}.{{.Struct
 	return tx.Commit().Error
 }
 
-func (s *{{.StructName|toLower}}Service) Get(id interface{}, unscoped ...bool) (*{{.PackageName}}.{{.StructName}}, error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) Get(id interface{}, unscoped ...bool) (*{{.PackageName}}.{{.StructName}}, error) {
 	var item {{.PackageName}}.{{.StructName}}
 
 	var permanently bool
@@ -60,13 +48,16 @@ func (s *{{.StructName|toLower}}Service) Get(id interface{}, unscoped ...bool) (
 		permanently = true
 	}
 	if err := s.DB.Scopes({{.Config.Query.Package}}.Unscoped(permanently)).Where("id=?", id).Take(&item).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, {{.Config.Model.Package}}.ErrRecordNotFound
+		}
 		return nil, err
 	}
 
 	return &item, nil
 }
 
-func (s *{{.StructName|toLower}}Service) Update(item *{{.PackageName}}.{{.StructName}}) (err error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) Update(item *{{.PackageName}}.{{.StructName}}) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -86,7 +77,7 @@ func (s *{{.StructName|toLower}}Service) Update(item *{{.PackageName}}.{{.Struct
 	return tx.Commit().Error
 }
 
-func (s *{{.StructName|toLower}}Service) UpdateSel(item *{{.PackageName}}.{{.StructName}}, sel []string) (err error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) UpdateSel(item *{{.PackageName}}.{{.StructName}}, sel []string) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -109,7 +100,7 @@ func (s *{{.StructName|toLower}}Service) UpdateSel(item *{{.PackageName}}.{{.Str
 	return tx.Commit().Error
 }
 
-func (s *{{.StructName|toLower}}Service) Delete(id interface{}, unscoped ...bool) (err error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) Delete(id interface{}, unscoped ...bool) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -133,7 +124,7 @@ func (s *{{.StructName|toLower}}Service) Delete(id interface{}, unscoped ...bool
 }
 
 {{if .Helper.HasField "deleted_at" -}}
-func (s *{{.StructName|toLower}}Service) Undelete(id interface{}) (err error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) Undelete(id interface{}) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -153,7 +144,7 @@ func (s *{{.StructName|toLower}}Service) Undelete(id interface{}) (err error) {
 }
 {{end}}
 
-func (s *{{.StructName|toLower}}Service) GetList(base *query.Base, q *query.{{.StructName}}) ([]*{{.PackageName}}.{{.StructName}}, int, error) {
+func (s *{{.StructName|toLowerCamelCase}}Service) GetList(base *query.Base, q *query.{{.StructName}}) ([]*{{.PackageName}}.{{.StructName}}, int, error) {
 	var items []*{{.PackageName}}.{{.StructName}}
 	var total int
 

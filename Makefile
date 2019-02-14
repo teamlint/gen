@@ -51,7 +51,4 @@ build:
 test:
 	go test  -v ./test
 run:
-	# go run main.go --connstr "root:123456@tcp(127.0.0.1:3306)/test?&parseTime=True" --database test  --json --gorm 
-	@echo "generating..."
 	@go run main.go 
-	@echo "generated."

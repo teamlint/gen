@@ -42,6 +42,7 @@ func initConfig() {
 	vConfig.SetConfigName("config")
 	vConfig.AddConfigPath(".") // optionally look for config in the working directory
 	vConfig.SetDefault("model.enabled", true)
+	vConfig.SetDefault("model.base", true)
 	vConfig.SetDefault("model.package", "model")
 	vConfig.SetDefault("model.import", "model")
 	vConfig.SetDefault("query.enabled", true)
@@ -75,6 +76,7 @@ func initConfig() {
 	modelConfig.Package = defaultPkgName
 	modelConfig.Import = vConfig.GetString("model.import")
 	modelConfig.Enabled = vConfig.GetBool("model.enabled")
+	modelConfig.Base = vConfig.GetBool("model.base")
 	cfg.Model = modelConfig
 	// tables config
 	var tableConfig map[string]config.Table
@@ -133,12 +135,12 @@ func main() {
 		return
 	}
 	defer db.Close()
-
+	fmt.Println("generating...")
 	genModel(db, cfg)
 	genQuery(db, cfg)
 	genService(db, cfg)
 	// genController(apiName, ct, tables)
-
+	fmt.Println("generate completed.")
 }
 
 /*
@@ -188,14 +190,37 @@ func genController(apiName string, ct *template.Template, tables []string) {
 
 // func genModel(dirName string, db *sql.DB, t *template.Template, tables []string) {
 func genModel(db *sql.DB, cfg *config.Config) {
-	if !cfg.Model.Enabled {
+	if !cfg.Model.Enabled && !cfg.Model.Base {
 		if cfg.Debug {
-			fmt.Printf("model config enabled: %v\n", cfg.Model.Enabled)
+			fmt.Println("base model & model config disabled")
 		}
 		return
 	}
 	pkgName := cfg.Model.Package
 	os.Mkdir(pkgName, 0777)
+
+	// model base
+	if cfg.Model.Base {
+		base, err := getTemplate(gtmpl.ModelBaseTmpl)
+		if err != nil {
+			fmt.Println("Error in loading model base template: " + err.Error())
+			return
+		}
+
+		var buf bytes.Buffer
+		queryInfo := dbmeta.QueryInfo{Config: cfg}
+		err = base.Execute(&buf, queryInfo)
+		if err != nil {
+			fmt.Println("Error in rendering model base: " + err.Error())
+			return
+		}
+		data, err := format.Source(buf.Bytes())
+		if err != nil {
+			fmt.Println("Error in formating model base source: " + err.Error())
+			return
+		}
+		ioutil.WriteFile(filepath.Join(pkgName, cfg.Prefix+"model"+cfg.Suffix+".go"), data, 0777)
+	}
 
 	var t *template.Template
 	var err error
@@ -303,13 +328,42 @@ func genQuery(db *sql.DB, cfg *config.Config) {
 func genService(db *sql.DB, cfg *config.Config) {
 	if !cfg.Service.Enabled {
 		if cfg.Debug {
-			fmt.Printf("service config enabled: %v\n", cfg.Service.Enabled)
+			fmt.Println("service config disabled")
 		}
 		return
 	}
 	pkgName := cfg.Service.Package
 	os.Mkdir(pkgName, 0777)
 
+	// interface
+	if cfg.Service.Interface {
+		intf, err := getTemplate(gtmpl.ServiceInterfaceTmpl)
+		if err != nil {
+			fmt.Println("Error in loading service interface template: " + err.Error())
+			return
+		}
+
+		// generate go files for each table
+		tables := cfg.DB.GetTables(db)
+		for _, tableName := range tables {
+			modelInfo := dbmeta.GenerateStruct(db, tableName, cfg)
+
+			var buf bytes.Buffer
+			err = intf.Execute(&buf, modelInfo)
+			if err != nil {
+				fmt.Println("Error in rendering service interface: " + err.Error())
+				return
+			}
+			data, err := format.Source(buf.Bytes())
+			if err != nil {
+				fmt.Println("Error in formating service interface source: " + err.Error())
+				return
+			}
+			ioutil.WriteFile(filepath.Join(pkgName, cfg.Prefix+inflection.Singular(tableName)+"_interface"+cfg.Suffix+".go"), data, 0777)
+		}
+	}
+
+	// service
 	var t *template.Template
 	var err error
 	if cfg.Service.Template == "" {

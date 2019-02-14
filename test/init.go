@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	db          *gorm.DB
-	err         error
-	userService service.UserService
+	db                *gorm.DB
+	err               error
+	userService       service.UserService
+	customUserService service.CustomUserService
 )
 
 func init() {
@@ -21,4 +22,5 @@ func init() {
 	db.LogMode(true)
 	// defer db.Close()
 	userService = service.NewUserService(db)
+	customUserService = service.NewCustomUserService(db)
 }

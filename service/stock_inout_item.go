@@ -9,15 +9,15 @@ import (
 	"github.com/teamlint/gen/model/query"
 )
 
-type userService struct {
+type stockInoutItemService struct {
 	DB *gorm.DB
 }
 
-func NewUserService(db *gorm.DB) UserService {
-	return &userService{db}
+func NewStockInoutItemService(db *gorm.DB) StockInoutItemService {
+	return &stockInoutItemService{db}
 }
 
-func (s *userService) Create(item *model.User) (err error) {
+func (s *stockInoutItemService) Create(item *model.StockInoutItem) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -37,8 +37,8 @@ func (s *userService) Create(item *model.User) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *userService) Get(id interface{}, unscoped ...bool) (*model.User, error) {
-	var item model.User
+func (s *stockInoutItemService) Get(id interface{}, unscoped ...bool) (*model.StockInoutItem, error) {
+	var item model.StockInoutItem
 
 	var permanently bool
 	if len(unscoped) > 0 && unscoped[0] {
@@ -54,7 +54,7 @@ func (s *userService) Get(id interface{}, unscoped ...bool) (*model.User, error)
 	return &item, nil
 }
 
-func (s *userService) Update(item *model.User) (err error) {
+func (s *stockInoutItemService) Update(item *model.StockInoutItem) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -74,7 +74,7 @@ func (s *userService) Update(item *model.User) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *userService) UpdateSel(item *model.User, sel []string) (err error) {
+func (s *stockInoutItemService) UpdateSel(item *model.StockInoutItem, sel []string) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -95,7 +95,7 @@ func (s *userService) UpdateSel(item *model.User, sel []string) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *userService) Delete(id interface{}, unscoped ...bool) (err error) {
+func (s *stockInoutItemService) Delete(id interface{}, unscoped ...bool) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -110,7 +110,7 @@ func (s *userService) Delete(id interface{}, unscoped ...bool) (err error) {
 	if len(unscoped) > 0 && unscoped[0] {
 		permanently = true
 	}
-	if e := tx.Scopes(query.Unscoped(permanently)).Where("id=?", id).Delete(&model.User{}).Error; e != nil {
+	if e := tx.Scopes(query.Unscoped(permanently)).Where("id=?", id).Delete(&model.StockInoutItem{}).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -118,7 +118,7 @@ func (s *userService) Delete(id interface{}, unscoped ...bool) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *userService) Undelete(id interface{}) (err error) {
+func (s *stockInoutItemService) Undelete(id interface{}) (err error) {
 	tx := s.DB.Begin()
 	if tx.Error != nil {
 		err = tx.Error
@@ -129,7 +129,7 @@ func (s *userService) Undelete(id interface{}) (err error) {
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-	if e := tx.Model(&model.User{}).Unscoped().Where("id=?", id).Update("deleted_at", nil).Error; e != nil {
+	if e := tx.Model(&model.StockInoutItem{}).Unscoped().Where("id=?", id).Update("deleted_at", nil).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
@@ -137,11 +137,11 @@ func (s *userService) Undelete(id interface{}) (err error) {
 	return tx.Commit().Error
 }
 
-func (s *userService) GetList(base *query.Base, q *query.User) ([]*model.User, int, error) {
-	var items []*model.User
+func (s *stockInoutItemService) GetList(base *query.Base, q *query.StockInoutItem) ([]*model.StockInoutItem, int, error) {
+	var items []*model.StockInoutItem
 	var total int
 
-	db := s.DB.Model(&model.User{}).
+	db := s.DB.Model(&model.StockInoutItem{}).
 		Scopes(base.OrderScopes()).
 		Scopes(base.OrderByScopes()).
 		Scopes(q.QueryScopes())
