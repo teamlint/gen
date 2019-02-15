@@ -24,8 +24,8 @@ suffix = ""
 [query]
     package="query"
     import="github.com/teamlint/gen/model/query"
-    enabled=true
-    base=true
+    enabled=false
+    base=false
     template=""
 
 [service]
