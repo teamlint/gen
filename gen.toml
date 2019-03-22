@@ -1,0 +1,66 @@
+debug         = true
+prefix        = ""
+suffix        = ""
+
+[db]
+    name      = "test"
+    host      = "127.0.0.1"
+    port      = 3306
+    user      = "root"
+    pass      = "123456"
+    ssl_mode  = "false"
+    # whitelist=["logs","users"]
+    blacklist = []
+
+[model]
+    package   = "model"
+    import    = "github.com/teamlint/gen/model"
+    enabled   = true
+    base      = true
+    guregu    = false
+    tags      = ["gorm","json"]
+    # template="templates/model.tpl"
+
+[query]
+    package   = "query"
+    import    = "github.com/teamlint/gen/model/query"
+    enabled   = false
+    base      = false
+    template  = ""
+
+[service]
+    package   = "service"
+    enabled   = true
+    interface = true
+    template  = ""
+
+[bootstrap]
+    package    = "demo"
+    import    = "github.com/teamlint/gen/demo"
+    enabled    = true
+    server     = true
+    router     = true
+    controller = false
+    middleware = false
+    global     = false
+    template   = ""
+
+# [controller]
+#     package="controller"
+#     enabled=true
+#     template=""
+
+# [tables.users.aliases]
+#   # up_plural     = "LogQuery"
+#   # up_singular   = "Log"
+#   # down_plural   = "logQuery"
+#   # down_singular = "log"
+
+[tables.users.columns.is_approved]
+    alias = ""
+    type  = "bool"
+
+[tables.users.columns.gender]
+    alias = "Sex"
+    type  = "UserGender"
+

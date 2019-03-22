@@ -24,6 +24,10 @@ type QueryInfo struct {
 	Config *config.Config
 }
 
+type BootstrapInfo struct {
+	Config *config.Config
+}
+
 // commonInitialisms is a set of common initialisms.
 // Only add entries that are highly unlikely to be non-initialisms.
 // For instance, "ID" is fine (Freudian code is rare), but "AND" is not.
