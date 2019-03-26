@@ -196,7 +196,8 @@ func generateFieldsTypes(db *sql.DB, tableName string, columns []*sql.ColumnType
 				if i == 0 {
 					annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s;primary_key\"", key))
 				} else {
-					annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s\"", key))
+					// annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s\"", key))
+					annotations = append(annotations, fmt.Sprintf(`gorm:"column:%s"`, key))
 				}
 			} else {
 				annotations = append(annotations, fmt.Sprintf("%s:\"%s\"", tag, key))

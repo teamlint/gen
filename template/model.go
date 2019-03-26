@@ -13,9 +13,8 @@ var (
     _ = time.Second
 )
 
-
 type {{.StructName}} struct {
-    {{range .Fields}}{{.}}
+	{{range .Fields}}{{.|raw}}
     {{end}}
 }
 

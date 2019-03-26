@@ -9,14 +9,14 @@ suffix        = ""
     user      = "root"
     pass      = "123456"
     ssl_mode  = "false"
-    # whitelist=["logs","users"]
+    whitelist = []
     blacklist = []
 
 [model]
     package   = "model"
     import    = "github.com/teamlint/gen/model"
     enabled   = true
-    base      = true
+    base      = false
     guregu    = false
     tags      = ["gorm","json"]
     # template="templates/model.tpl"
