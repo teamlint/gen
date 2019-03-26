@@ -293,11 +293,9 @@ func genModel(db *sql.DB, cfg *config.Config) {
 	}
 	// generate go files for each table
 	tables := cfg.DB.GetTables(db)
-	fmt.Printf("gen model tables: %v\n", tables)
 	for _, tableName := range tables {
 		modelInfo := dbmeta.GenerateStruct(db, tableName, cfg)
 
-		fmt.Printf("gen modelInfo: %+v\n", *modelInfo)
 		var buf bytes.Buffer
 		err := t.Execute(&buf, modelInfo)
 		if err != nil {
@@ -305,7 +303,6 @@ func genModel(db *sql.DB, cfg *config.Config) {
 			return
 		}
 		data, err := format.Source(buf.Bytes())
-		fmt.Println("formating model source: " + string(data))
 		if err != nil {
 			fmt.Println("Error in formating model source: " + err.Error())
 			return
