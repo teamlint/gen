@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+var (
+	_ = time.Second
+)
+
 type User struct {
 	ID          int        `gorm:"column:id;primary_key" json:"id"`
 	PID         int        `gorm:"column:pid" json:"pid"`
