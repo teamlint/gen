@@ -38,11 +38,6 @@ suffix        = ""
     package    = "demo"
     import    = "github.com/teamlint/gen/demo"
     enabled    = true
-    server     = true
-    router     = true
-    controller = false
-    middleware = false
-    global     = false
     template   = ""
 
 # [controller]

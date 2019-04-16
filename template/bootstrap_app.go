@@ -13,7 +13,7 @@ import (
 )
 func New(cfg *iris.Configuration, db *gorm.DB) *server.Server {
 	s := server.New("Bootstrap", "Bootstarp")
-	s.SetupDebug(true)
+	s.SetupDebug(cfg.GetOther()["Debug"].(bool))
 	s.SetupViews("./views", "shared/layout.html")
 	s.SetupAssets("./static")
 	s.SetupConfiguration(cfg)

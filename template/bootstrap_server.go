@@ -77,12 +77,6 @@ func (s *Server) SetupConfiguration(cfg *iris.Configuration) {
 	s.Application.Configure(iris.WithConfiguration(*cfg))
 }
 
-// SetupDB setup database
-// func (s *Server) SetupDB(db *gorm.DB) *Server {
-// 	s.DB = db
-// 	return s
-// }
-
 // SetupAssets setup static assets resources
 func (s *Server) SetupAssets(assetsDir string) *Server {
 	// s.Favicon(assetsDir + "/img/" + favicon)

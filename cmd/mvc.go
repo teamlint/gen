@@ -276,10 +276,10 @@ func genServer() {
 	os.Mkdir(filepath.Join(pkgName, serverPkgName), 0777)
 
 	// server
-	if !cfg.Bootstrap.Server {
-		fmt.Println("server template disabled")
-		return
-	}
+	// if !cfg.Bootstrap.Server {
+	// 	fmt.Println("server template disabled")
+	// 	return
+	// }
 	var t *template.Template
 	var err error
 	t, err = getTemplate(gtmpl.BootstrapServerTmpl)
