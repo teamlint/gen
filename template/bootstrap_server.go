@@ -3,6 +3,9 @@ package template
 var BootstrapServerTmpl = `package server
 
 import (
+	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -79,7 +82,10 @@ func (s *Server) SetupConfiguration(cfg *iris.Configuration) {
 
 // SetupAssets setup static assets resources
 func (s *Server) SetupAssets(assetsDir string) *Server {
-	// s.Favicon(assetsDir + "/img/" + favicon)
+	faviconPath := filepath.Join(assetsDir, "img", favicon)
+	if _, err := os.Stat(faviconPath); !os.IsNotExist(err) {
+		s.Favicon(faviconPath)
+	}
 	s.StaticWeb(assetsDir[1:], assetsDir)
 	return s
 }
@@ -140,18 +146,21 @@ func (s *Server) SetupWebsockets(endpoint string, onConnection websocket.Connect
 // SetupErrors prepares the http error handlers
 func (s *Server) SetupErrors() *Server {
 	s.Application.OnAnyErrorCode(func(ctx iris.Context) {
+		statusCode := ctx.GetStatusCode()
+		errCode := ctx.Values().GetIntDefault("err.code", statusCode)
+		errMsg := ctx.Values().GetStringDefault("err.message", http.StatusText(statusCode))
 		err := iris.Map{
 			"Title":      s.AppTitle,
-			"StatusCode": ctx.GetStatusCode(),
-			"Code":       ctx.Values().GetString("err.code"),
-			"Message":    ctx.Values().GetString("err.message"),
+			"StatusCode": statusCode,
+			"Code":       errCode,
+			"Message":    errMsg,
 		}
-
+		// json
 		if jsonOutput := ctx.URLParamExists("json"); jsonOutput {
 			ctx.JSON(err)
 			return
 		}
-
+		// views
 		ctx.ViewLayout(iris.NoLayout)
 		ctx.ViewData("Error", err)
 		ctx.ViewData("Title", "Error")
