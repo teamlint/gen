@@ -27,7 +27,6 @@ type Shop struct {
 	ContactPhone string     `gorm:"column:contact_phone" json:"contact_phone"`
 	AgentID      string     `gorm:"column:agent_id" json:"agent_id"`
 	ManagerID    string     `gorm:"column:manager_id" json:"manager_id"`
-	CreatedAt    time.Time  `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt    time.Time  `gorm:"column:updated_at" json:"updated_at"`
 	DeletedAt    *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 	LicensePhoto string     `gorm:"column:license_photo" json:"license_photo"`

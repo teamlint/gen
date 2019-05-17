@@ -68,8 +68,11 @@ func (s *{{.StructName|toLowerCamelCase}}Service) Update(item *{{.PackageName}}.
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-
+	{{if .Helper.HasField "created_at" -}}
+	if e := tx.Unscoped().Omit("created_at").Save(item).Error; e != nil {
+	{{else -}}
 	if e := tx.Unscoped().Save(item).Error; e != nil {
+	{{end -}}
 		tx.Rollback()
 		return e
 	}

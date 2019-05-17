@@ -65,7 +65,6 @@ func (s *shopService) Update(item *model.Shop) (err error) {
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-
 	if e := tx.Unscoped().Save(item).Error; e != nil {
 		tx.Rollback()
 		return e

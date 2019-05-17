@@ -65,8 +65,7 @@ func (s *stockInoutItemService) Update(item *model.StockInoutItem) (err error) {
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-
-	if e := tx.Unscoped().Save(item).Error; e != nil {
+	if e := tx.Unscoped().Omit("created_at").Save(item).Error; e != nil {
 		tx.Rollback()
 		return e
 	}
